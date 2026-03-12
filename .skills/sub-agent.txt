@@ -1,0 +1,8 @@
+spawn a sub-agent to do the task (to save context window token) for you. 
+
+command to call sub-agent is:
+
+./hello-world --sub-agent --quiet --init-prompt "<your_task_prompt_here>" 
+
+!!IMPORTANT!!
+The result will be available as stderr instead of stdout

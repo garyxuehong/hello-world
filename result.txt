@@ -1,0 +1,14 @@
+I'll list the files in the current directory for you.
+Here are the files and directories in the current location:
+
+- **Directories:**
+  - `.git/` - Git repository folder
+  - `.skills/` - Skills folder containing additional tools
+
+- **Files:**
+  - `go.mod` - Go module file (28 bytes)
+  - `hello-world` - Executable file (8.4 MB, executable)
+  - `main.go` - Go source code file (12.5 KB)
+  - `result.txt` - Text file (54 bytes)
+
+The directory appears to contain a Go project with a compiled executable and some additional files.

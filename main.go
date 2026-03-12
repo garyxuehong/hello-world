@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,12 @@ import (
 	"runtime"
 	"strings"
 	"time"
+)
+
+var (
+	subAgentMode bool
+	initPrompt   string
+	quietMode    bool
 )
 
 const (
@@ -155,13 +162,22 @@ func truncateToWords(s string, maxWords int) string {
 	return strings.Join(words[:maxWords], " ") + fmt.Sprintf("\n... [truncated, showing %d of %d words]", maxWords, len(words))
 }
 
+func logInfo(format string, a ...interface{}) {
+	if !quietMode {
+		fmt.Printf(format, a...)
+	}
+}
+
 func printToolResult(result string) {
+	if quietMode {
+		return
+	}
 	preview := truncateToWords(result, 200)
 	fmt.Printf("📎 Result: %s\n", preview)
 }
 
 func executeShell(command string) string {
-	fmt.Printf("🔧 Executing: %s\n", command)
+	logInfo("🔧 Executing: %s\n", command)
 
 	cmd := exec.Command("bash", "-c", command)
 	var stdout, stderr bytes.Buffer
@@ -195,7 +211,7 @@ func executeShell(command string) string {
 }
 
 func listSkills() string {
-	fmt.Println("📂 Listing skills...")
+	logInfo("📂 Listing skills...\n")
 
 	entries, err := os.ReadDir(".skills")
 	if err != nil {
@@ -230,7 +246,7 @@ func listSkills() string {
 }
 
 func readSkill(filename string) string {
-	fmt.Printf("📖 Reading skill: %s\n", filename)
+	logInfo("📖 Reading skill: %s\n", filename)
 
 	// Sanitize: prevent path traversal
 	clean := filepath.Clean(filename)
@@ -289,9 +305,9 @@ func sendRequest(apiKey string) (*ChatResponse, error) {
 
 	wordCount := len(strings.Fields(string(jsonData)))
 	if wordCount > 30000 {
-		fmt.Printf("🚨 CRITICAL: Request size is %d words (exceeds 30k limit!)\n", wordCount)
+		logInfo("🚨 CRITICAL: Request size is %d words (exceeds 30k limit!)\n", wordCount)
 	} else {
-		fmt.Printf("📤 Request size: %d words\n", wordCount)
+		logInfo("📤 Request size: %d words\n", wordCount)
 	}
 
 	req, err := http.NewRequest("POST", claudeAPIURL, bytes.NewBuffer(jsonData))
@@ -360,7 +376,11 @@ func chat(userMessage string) {
 			switch block.Type {
 			case "text":
 				if block.Text != "" {
-					fmt.Println(block.Text)
+					if subAgentMode {
+						fmt.Fprintln(os.Stderr, block.Text)
+					} else {
+						fmt.Println(block.Text)
+					}
 				}
 			case "tool_use":
 				result := executeTool(block.Name, block.Input)
@@ -430,7 +450,23 @@ func showStartup() {
 }
 
 func main() {
-	showStartup()
+	flag.BoolVar(&subAgentMode, "sub-agent", false, "Run in sub-agent mode: output final AI response to stderr")
+	flag.StringVar(&initPrompt, "init-prompt", "", "Initial prompt to send to AI immediately on start")
+	flag.BoolVar(&quietMode, "quiet", false, "Suppress tool execution and diagnostic output")
+	flag.Parse()
+
+	if !subAgentMode {
+		showStartup()
+	}
+
+	// If init-prompt is provided, send it immediately
+	if initPrompt != "" {
+		chat(initPrompt)
+		// In sub-agent mode, exit after processing the init prompt
+		if subAgentMode {
+			return
+		}
+	}
 
 	scanner := bufio.NewScanner(os.Stdin)
 
