@@ -147,6 +147,19 @@ func getTools() []Tool {
 	}
 }
 
+func truncateToWords(s string, maxWords int) string {
+	words := strings.Fields(s)
+	if len(words) <= maxWords {
+		return s
+	}
+	return strings.Join(words[:maxWords], " ") + fmt.Sprintf("\n... [truncated, showing %d of %d words]", maxWords, len(words))
+}
+
+func printToolResult(result string) {
+	preview := truncateToWords(result, 200)
+	fmt.Printf("📎 Result: %s\n", preview)
+}
+
 func executeShell(command string) string {
 	fmt.Printf("🔧 Executing: %s\n", command)
 
@@ -177,7 +190,7 @@ func executeShell(command string) string {
 		result.WriteString("Command completed successfully (no output).")
 	}
 
-	fmt.Printf("📎 Result: %s\n", result.String())
+	printToolResult(result.String())
 	return result.String()
 }
 
@@ -212,7 +225,7 @@ func listSkills() string {
 		result += fmt.Sprintf("  - %s\n", s)
 	}
 
-	fmt.Printf("📎 Found %d skill(s)\n", len(skills))
+	printToolResult(result)
 	return result
 }
 
@@ -235,7 +248,7 @@ func readSkill(filename string) string {
 	}
 
 	content := string(data)
-	fmt.Printf("📎 Loaded skill: %s (%d bytes)\n", filename, len(data))
+	printToolResult(content)
 	return content
 }
 

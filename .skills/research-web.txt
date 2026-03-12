@@ -2,4 +2,11 @@ many doc/apis comes in web page, in order to research the doc, you can use curl 
 
 also the url can be a root url, follow necessary sub link to curl sub page
 
+!!IMPORTANT!! make sure you call lynx to extract critical information only, not wastes tokens on css/js
+comand like
+
+curl -s <url_to_research> | lynx -dump -stdin
+
+when following sub page, treat the "file:///<sub_path>" as url "https://<current_domain_name>/<sub_path>" 
+
 please stop guess, only follow and curl sub page if you really see the link. some times the root page is single page app, you see nothing. that's okay, just stop
