@@ -287,6 +287,13 @@ func sendRequest(apiKey string) (*ChatResponse, error) {
 		return nil, fmt.Errorf("error marshalling request: %v", err)
 	}
 
+	wordCount := len(strings.Fields(string(jsonData)))
+	if wordCount > 30000 {
+		fmt.Printf("🚨 CRITICAL: Request size is %d words (exceeds 30k limit!)\n", wordCount)
+	} else {
+		fmt.Printf("📤 Request size: %d words\n", wordCount)
+	}
+
 	req, err := http.NewRequest("POST", claudeAPIURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %v", err)
