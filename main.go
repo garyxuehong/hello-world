@@ -49,8 +49,8 @@ type ContentBlock struct {
 }
 
 type ChatResponse struct {
-	Content  []ContentBlock `json:"content"`
-	StopReason string       `json:"stop_reason"`
+	Content    []ContentBlock `json:"content"`
+	StopReason string         `json:"stop_reason"`
 }
 
 type APIError struct {
@@ -95,7 +95,7 @@ When executing commands:
 - Chain commands with && when appropriate
 - Always consider the current OS (%s) when choosing commands
 
-You also have a list of tools or skills available in a folder called .skills. In it you will find extra tools and skills you need to fulfill a task. Each skill is in a separate file.
+You also have a list of tools or skills available in a folder called ".skills" In it you will find extra tools and skills you need to fulfill a task. Each skill is in a separate file.
 
 To discover and use skills:
 1. Use the "list_skills" tool to see all available skill files in the .skills folder
