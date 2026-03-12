@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -69,6 +70,10 @@ type ShellInput struct {
 	Command string `json:"command"`
 }
 
+type ReadSkillInput struct {
+	Filename string `json:"filename"`
+}
+
 var conversationHistory []Message
 
 func getSystemPrompt() string {
@@ -88,7 +93,16 @@ Use the "shell" tool to execute any commands on the system. You can run any vali
 When executing commands:
 - Prefer concise, single-purpose commands
 - Chain commands with && when appropriate
-- Always consider the current OS (%s) when choosing commands`, osName, arch, installCmd, osName)
+- Always consider the current OS (%s) when choosing commands
+
+You also have a list of tools or skills available in a folder called .skills. In it you will find extra tools and skills you need to fulfill a task. Each skill is in a separate file.
+
+To discover and use skills:
+1. Use the "list_skills" tool to see all available skill files in the .skills folder
+2. Use the "read_skill" tool to read the content of a specific skill file
+3. The skill file will describe additional tools, functions, or instructions you can use — follow those instructions to complete the task
+
+Before starting a complex task, always check the .skills folder for any relevant skills that can help you.`, osName, arch, installCmd, osName)
 }
 
 func getTools() []Tool {
@@ -105,6 +119,29 @@ func getTools() []Tool {
 					}
 				},
 				"required": ["command"]
+			}`),
+		},
+		{
+			Name:        "list_skills",
+			Description: "List all available skill files in the .skills folder. Returns the filenames of all skills available for use.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {},
+				"required": []
+			}`),
+		},
+		{
+			Name:        "read_skill",
+			Description: "Read the content of a specific skill file from the .skills folder. The skill file contains instructions, tool definitions, or other information needed to fulfill a task.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"filename": {
+						"type": "string",
+						"description": "The name of the skill file to read (e.g. 'docker.md')"
+					}
+				},
+				"required": ["filename"]
 			}`),
 		},
 	}
@@ -144,6 +181,64 @@ func executeShell(command string) string {
 	return result.String()
 }
 
+func listSkills() string {
+	fmt.Println("📂 Listing skills...")
+
+	entries, err := os.ReadDir(".skills")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "No .skills folder found. Create a .skills directory and add skill files to it."
+		}
+		return fmt.Sprintf("Error reading .skills folder: %v", err)
+	}
+
+	if len(entries) == 0 {
+		return "The .skills folder is empty. No skills available."
+	}
+
+	var skills []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			skills = append(skills, entry.Name())
+		}
+	}
+
+	if len(skills) == 0 {
+		return "The .skills folder contains no skill files."
+	}
+
+	result := fmt.Sprintf("Available skills (%d):\n", len(skills))
+	for _, s := range skills {
+		result += fmt.Sprintf("  - %s\n", s)
+	}
+
+	fmt.Printf("📎 Found %d skill(s)\n", len(skills))
+	return result
+}
+
+func readSkill(filename string) string {
+	fmt.Printf("📖 Reading skill: %s\n", filename)
+
+	// Sanitize: prevent path traversal
+	clean := filepath.Clean(filename)
+	if strings.Contains(clean, "..") || filepath.IsAbs(clean) {
+		return "Error: invalid filename. Use only the skill filename, not a path."
+	}
+
+	path := filepath.Join(".skills", clean)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Sprintf("Skill file '%s' not found. Use list_skills to see available skills.", filename)
+		}
+		return fmt.Sprintf("Error reading skill file: %v", err)
+	}
+
+	content := string(data)
+	fmt.Printf("📎 Loaded skill: %s (%d bytes)\n", filename, len(data))
+	return content
+}
+
 func executeTool(name string, input json.RawMessage) string {
 	switch name {
 	case "shell":
@@ -152,6 +247,14 @@ func executeTool(name string, input json.RawMessage) string {
 			return fmt.Sprintf("Error parsing tool input: %v", err)
 		}
 		return executeShell(shellInput.Command)
+	case "list_skills":
+		return listSkills()
+	case "read_skill":
+		var skillInput ReadSkillInput
+		if err := json.Unmarshal(input, &skillInput); err != nil {
+			return fmt.Sprintf("Error parsing tool input: %v", err)
+		}
+		return readSkill(skillInput.Filename)
 	default:
 		return fmt.Sprintf("Unknown tool: %s", name)
 	}
