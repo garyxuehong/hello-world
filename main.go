@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 )
 
 const (
@@ -284,7 +285,30 @@ func handleCommand(input string) {
 	}
 }
 
+func showStartup() {
+	logo := `
+  _          _ _                            _     _ 
+ | |__   ___| | | ___   __      _____  _ __| | __| |
+ | '_ \ / _ \ | |/ _ \  \ \ /\ / / _ \| '__| |/ _' |
+ | | | |  __/ | | (_) |  \ V  V / (_) | |  | | (_| |
+ |_| |_|\___|_|_|\___/    \_/\_/ \___/|_|  |_|\__,_|
+`
+	fmt.Print(logo)
+
+	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+	msg := "Initializing"
+
+	for i := 0; i < 20; i++ {
+		frame := frames[i%len(frames)]
+		fmt.Printf("\r  %s %s...", frame, msg)
+		time.Sleep(80 * time.Millisecond)
+	}
+	fmt.Print("\r  ✔ Ready!         \n\n")
+}
+
 func main() {
+	showStartup()
+
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
